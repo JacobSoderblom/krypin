@@ -1,0 +1,31 @@
+version: '3.7'
+
+services:
+  controller-dev:
+    hostname: krypin-controller-development
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
+    environment:
+      DEBUG: "true"
+    volumes:
+    - ./:/home/krypin
+    working_dir: /home/krypin
+    ports:
+    - "8081:8081"
+    entrypoint: CompileDaemon -log-prefix=false -build="go build -o ./tmp/controller ./cmd/controller/*.go" -command="./tmp/controller"
+  
+  mosquitto:
+    image: eclipse-mosquitto
+    hostname: mosquitto
+    container_name: mosquitto
+    expose:
+      - "1883"
+      - "9001"
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
