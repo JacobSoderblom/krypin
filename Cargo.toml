@@ -1,0 +1,4 @@
+
+[workspace]
+members = ["hub-core", "hubd", "adapter-mqtt", "automations"]
+resolver = "2"
