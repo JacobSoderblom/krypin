@@ -29,6 +29,7 @@ The helper `spawn_command_loop` takes an `Arc<AdapterLifecycle>` implementer and
 - Command handlers should validate capabilities (for example, `SwitchDescription::validate`) before mutating device state and publishing telemetry.
 - Use structured errors for recoverable issues (missing fields, unsupported commands) and let fatal initialization errors propagate from `init`/`discover`.
 - Avoid panics inside background loops; prefer returning an error so the caller can restart the adapter if needed.
+- Command subscription drops malformed payloads but logs decoding failures with the entity id to aid debugging.
 
 ## Capability registration
 

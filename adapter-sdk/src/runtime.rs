@@ -12,6 +12,7 @@ use hub_core::{
     model::EntityId,
 };
 use tokio_stream::{Stream, StreamExt};
+use tracing::warn;
 
 /// A thin wrapper around the message bus that standardizes how adapters
 /// announce devices/entities, publish telemetry, and receive commands.
@@ -50,11 +51,13 @@ impl AdapterContext {
         entity_id: EntityId,
     ) -> Result<Box<dyn Stream<Item = CommandSet> + Unpin + Send>> {
         let topic = format!("{TOPIC_COMMAND_PREFIX}{}", entity_id.0);
-        let stream = self
-            .bus
-            .subscribe(&topic)
-            .await?
-            .filter_map(|msg| serde_json::from_slice(&msg.payload).ok());
+        let stream = self.bus.subscribe(&topic).await?.filter_map(move |msg| {
+            let parsed = serde_json::from_slice(&msg.payload);
+            if let Err(err) = &parsed {
+                warn!(entity_id = ?entity_id, error = %err, "failed to decode command payload");
+            }
+            parsed.ok()
+        });
         Ok(Box::new(stream))
     }
 }

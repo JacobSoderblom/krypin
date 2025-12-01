@@ -1,7 +1,8 @@
 use std::sync::{Arc, Mutex};
 
-use adapter_sdk::runtime::{spawn_command_loop, AdapterContext, AdapterLifecycle};
+use adapter_sdk::runtime::{AdapterContext, AdapterLifecycle, spawn_command_loop};
 use anyhow::{Result, anyhow};
+use bytes::Bytes;
 use hub_core::{
     bus::{Bus, InMemoryBus},
     bus_contract::{
@@ -11,7 +12,10 @@ use hub_core::{
     model::{DeviceId, EntityDomain, EntityId},
 };
 use serde_json::json;
-use tokio::{sync::Notify, time::{Duration, timeout}};
+use tokio::{
+    sync::Notify,
+    time::{Duration, timeout},
+};
 use tokio_stream::StreamExt;
 use uuid::Uuid;
 
@@ -123,6 +127,31 @@ async fn command_loop_invokes_handler() -> Result<()> {
     assert_eq!(captured.len(), 1);
     assert_eq!(captured[0].action, "set");
     assert_eq!(captured[0].value, json!({"on": true}));
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn subscribe_commands_skips_invalid_payloads() -> Result<()> {
+    let bus: Arc<dyn Bus> = Arc::new(InMemoryBus::default());
+    let ctx = AdapterContext::new(bus.clone());
+
+    let entity_id = EntityId(Uuid::new_v4());
+    let mut stream = ctx.subscribe_commands(entity_id).await?;
+
+    let topic = format!("{TOPIC_COMMAND_PREFIX}{}", entity_id.0);
+    bus.publish(&topic, Bytes::from_static(b"not-json")).await?;
+
+    let cmd = CommandSet { action: "toggle".into(), value: json!(null), correlation_id: None };
+    bus.publish(&topic, serde_json::to_vec(&cmd)?.into()).await?;
+
+    let received = timeout(Duration::from_millis(200), stream.next())
+        .await
+        .expect("valid command never received")
+        .expect("command stream closed");
+
+    assert_eq!(received.action, "toggle");
+    assert_eq!(received.value, json!(null));
 
     Ok(())
 }

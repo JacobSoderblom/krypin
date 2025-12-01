@@ -1,5 +1,5 @@
 use std::collections::BTreeMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use adapter_sdk::runtime::{spawn_command_loop, AdapterContext, AdapterLifecycle};
 use anyhow::{Context, Result};
@@ -15,7 +15,10 @@ use hub_core::{
     model::{DeviceId, EntityDomain, EntityId},
 };
 use serde_json::json;
-use tokio::time::{sleep, Duration};
+use tokio::{
+    sync::Mutex,
+    time::{sleep, Duration},
+};
 use tokio_stream::StreamExt;
 use tracing_subscriber::EnvFilter;
 use uuid::Uuid;
@@ -33,7 +36,7 @@ impl TemplateAdapter {
     }
 
     async fn publish_state(&self, ctx: &AdapterContext) -> Result<()> {
-        let on = *self.state.lock().unwrap();
+        let on = *self.state.lock().await;
         let update = StateUpdate {
             entity_id: self.entity_id,
             value: serde_json::Value::Bool(on),
@@ -96,12 +99,12 @@ impl AdapterLifecycle for TemplateAdapter {
         tracing::info!(?cmd, "received command");
         match cmd.action.as_str() {
             "toggle" => {
-                let mut guard = self.state.lock().unwrap();
+                let mut guard = self.state.lock().await;
                 *guard = !*guard;
             }
             "set" => {
                 if let Some(target) = cmd.value.get("on").and_then(|v| v.as_bool()) {
-                    *self.state.lock().unwrap() = target;
+                    *self.state.lock().await = target;
                 }
             }
             other => tracing::warn!(action = other, "unsupported action"),
