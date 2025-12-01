@@ -1,4 +1,5 @@
 pub mod config;
+pub mod heartbeat;
 pub mod http;
 pub mod state;
 pub mod subscribers;
@@ -10,6 +11,7 @@ use crate::{config::Config, http::serve, telemetry::init_tracing, wiring::build_
 pub async fn run(cfg: Config) -> anyhow::Result<()> {
     init_tracing(&cfg)?;
     let app_state = build_state(&cfg).await?;
+    heartbeat::spawn(app_state.bus.clone());
     subscribers::spawn_all(app_state.clone());
     serve(app_state, cfg).await
 }

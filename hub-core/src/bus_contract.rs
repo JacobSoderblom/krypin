@@ -9,6 +9,7 @@ pub const TOPIC_DEVICE_ANNOUNCE: &str = "krypin.device.announce";
 pub const TOPIC_ENTITY_ANNOUNCE: &str = "krypin.entity.announce";
 pub const TOPIC_STATE_UPDATE_PREFIX: &str = "krypin.state.update.";
 pub const TOPIC_COMMAND_PREFIX: &str = "krypin.command.";
+pub const TOPIC_HEARTBEAT: &str = "krypin.hub.heartbeat";
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct DeviceAnnounce {
@@ -44,6 +45,11 @@ pub struct StateUpdate {
     pub attributes: BTreeMap<String, serde_json::Value>,
     pub ts: DateTime<Utc>,
     pub source: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Heartbeat {
+    pub ts: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
