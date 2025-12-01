@@ -65,6 +65,7 @@ fn make_device_meta(device_id: DeviceId) -> DeviceMeta {
         hw_version: None,
         area: None,
         metadata: BTreeMap::new(),
+        zigbee: None,
     }
 }
 

@@ -91,7 +91,7 @@ impl HvacComponent {
             sw_version: device.sw_version.clone(),
             hw_version: device.hw_version.clone(),
             area: device.area,
-            metadata: device.metadata.clone(),
+            metadata: device.metadata_map(),
         };
         let bytes = Bytes::from(serde_json::to_vec(&message)?);
         self.bus.publish(TOPIC_DEVICE_ANNOUNCE, bytes).await?;

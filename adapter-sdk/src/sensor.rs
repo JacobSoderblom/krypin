@@ -93,7 +93,7 @@ impl BinarySensorComponent {
             sw_version: d.sw_version.clone(),
             hw_version: d.hw_version.clone(),
             area: d.area,
-            metadata: d.metadata.clone(),
+            metadata: d.metadata_map(),
         };
         let bytes = Bytes::from(serde_json::to_vec(&msg)?);
         self.bus.publish(TOPIC_DEVICE_ANNOUNCE, bytes).await?;
