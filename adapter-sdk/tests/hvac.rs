@@ -7,7 +7,9 @@ use async_trait::async_trait;
 use bytes::Bytes;
 use hub_core::{
     bus::{Bus, InMemoryBus},
-    bus_contract::{StateUpdate, TOPIC_COMMAND_PREFIX, TOPIC_DEVICE_ANNOUNCE, TOPIC_STATE_UPDATE_PREFIX},
+    bus_contract::{
+        StateUpdate, TOPIC_COMMAND_PREFIX, TOPIC_DEVICE_ANNOUNCE, TOPIC_STATE_UPDATE_PREFIX,
+    },
     cap::hvac::{HvacCommand, HvacDescription, HvacFeatures, HvacMode, HvacState, Temperature},
     model::{DeviceId, EntityId},
 };
@@ -25,7 +27,11 @@ struct TestDriver {
 
 impl TestDriver {
     fn new(description: HvacDescription, state: HvacState) -> Self {
-        Self { description, state: Arc::new(Mutex::new(state)), commands: Arc::new(Mutex::new(Vec::new())) }
+        Self {
+            description,
+            state: Arc::new(Mutex::new(state)),
+            commands: Arc::new(Mutex::new(Vec::new())),
+        }
     }
 
     fn commands(&self) -> Vec<HvacCommand> {
@@ -128,7 +134,12 @@ async fn handles_set_mode_command_and_emits_state() -> Result<()> {
         min_temp: None,
         max_temp: None,
     };
-    let returned_state = HvacState { mode: HvacMode::Cool, target_temperature: None, ambient_temperature: None, fan_mode: None };
+    let returned_state = HvacState {
+        mode: HvacMode::Cool,
+        target_temperature: None,
+        ambient_temperature: None,
+        fan_mode: None,
+    };
     let driver_impl = Arc::new(TestDriver::new(description, returned_state));
     let component = HvacComponent::new(bus, device, entity, driver_impl.clone());
 
@@ -149,9 +160,7 @@ async fn handles_set_mode_command_and_emits_state() -> Result<()> {
         "action": "set_mode",
         "value": {"mode": "cool"}
     }))?);
-    bus_impl
-        .publish(&format!("{TOPIC_COMMAND_PREFIX}{}", entity_id.0), payload)
-        .await?;
+    bus_impl.publish(&format!("{TOPIC_COMMAND_PREFIX}{}", entity_id.0), payload).await?;
 
     let message = timeout(Duration::from_millis(200), state_sub.next())
         .await

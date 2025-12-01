@@ -7,8 +7,12 @@ use async_trait::async_trait;
 use bytes::Bytes;
 use hub_core::{
     bus::{Bus, InMemoryBus},
-    bus_contract::{StateUpdate, TOPIC_COMMAND_PREFIX, TOPIC_DEVICE_ANNOUNCE, TOPIC_STATE_UPDATE_PREFIX},
-    cap::robotvac::{RobotVacCommand, RobotVacDescription, RobotVacFeatures, RobotVacState, RobotVacStatus},
+    bus_contract::{
+        StateUpdate, TOPIC_COMMAND_PREFIX, TOPIC_DEVICE_ANNOUNCE, TOPIC_STATE_UPDATE_PREFIX,
+    },
+    cap::robotvac::{
+        RobotVacCommand, RobotVacDescription, RobotVacFeatures, RobotVacState, RobotVacStatus,
+    },
     model::{DeviceId, EntityId},
 };
 use serde_json::json;
@@ -25,7 +29,11 @@ struct TestDriver {
 
 impl TestDriver {
     fn new(description: RobotVacDescription, state: RobotVacState) -> Self {
-        Self { description, state: Arc::new(Mutex::new(state)), commands: Arc::new(Mutex::new(Vec::new())) }
+        Self {
+            description,
+            state: Arc::new(Mutex::new(state)),
+            commands: Arc::new(Mutex::new(Vec::new())),
+        }
     }
 
     fn commands(&self) -> Vec<RobotVacCommand> {
@@ -60,7 +68,12 @@ fn make_device_meta(device_id: DeviceId) -> DeviceMeta {
 }
 
 fn make_entity_meta(entity_id: EntityId) -> EntityMeta {
-    EntityMeta { id: entity_id, name: "Test Vacuum".into(), icon: None, attributes: BTreeMap::new() }
+    EntityMeta {
+        id: entity_id,
+        name: "Test Vacuum".into(),
+        icon: None,
+        attributes: BTreeMap::new(),
+    }
 }
 
 #[tokio::test]
@@ -76,7 +89,11 @@ async fn publishes_state_update_with_expected_attributes() -> Result<()> {
 
     let description = RobotVacDescription { entity_id, features: RobotVacFeatures::START };
 
-    let state = RobotVacState { status: RobotVacStatus::Cleaning, battery_level: Some(88), fan_power: Some(2) };
+    let state = RobotVacState {
+        status: RobotVacStatus::Cleaning,
+        battery_level: Some(88),
+        fan_power: Some(2),
+    };
 
     let driver_impl = Arc::new(TestDriver::new(description, state.clone()));
     let component = RobotVacComponent::new(bus, device, entity, driver_impl);
@@ -113,7 +130,8 @@ async fn handles_start_command_and_emits_state() -> Result<()> {
     let entity = make_entity_meta(entity_id);
 
     let description = RobotVacDescription { entity_id, features: RobotVacFeatures::START };
-    let returned_state = RobotVacState { status: RobotVacStatus::Cleaning, battery_level: None, fan_power: None };
+    let returned_state =
+        RobotVacState { status: RobotVacStatus::Cleaning, battery_level: None, fan_power: None };
     let driver_impl = Arc::new(TestDriver::new(description, returned_state));
     let component = RobotVacComponent::new(bus, device, entity, driver_impl.clone());
 
@@ -131,9 +149,7 @@ async fn handles_start_command_and_emits_state() -> Result<()> {
     }
 
     let payload = Bytes::from(serde_json::to_vec(&json!({ "action": "start" }))?);
-    bus_impl
-        .publish(&format!("{TOPIC_COMMAND_PREFIX}{}", entity_id.0), payload)
-        .await?;
+    bus_impl.publish(&format!("{TOPIC_COMMAND_PREFIX}{}", entity_id.0), payload).await?;
 
     let message = timeout(Duration::from_millis(200), state_sub.next())
         .await

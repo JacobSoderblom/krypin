@@ -62,11 +62,7 @@ impl RobotVacDescription {
             RobotVacCommand::Locate => RobotVacFeatures::LOCATE,
             RobotVacCommand::SpotClean => RobotVacFeatures::SPOT,
         };
-        if self.features.contains(requires) {
-            Ok(())
-        } else {
-            Err("command unsupported")
-        }
+        if self.features.contains(requires) { Ok(()) } else { Err("command unsupported") }
     }
 }
 
@@ -78,7 +74,8 @@ impl TryFrom<&Entity> for RobotVacDescription {
             return Err("not a robot vacuum entity");
         }
 
-        let mut features = RobotVacFeatures::START | RobotVacFeatures::STOP | RobotVacFeatures::DOCK;
+        let mut features =
+            RobotVacFeatures::START | RobotVacFeatures::STOP | RobotVacFeatures::DOCK;
 
         if let Some(bits) = entity.attributes.get("features").and_then(|v| v.as_u64()) {
             features = RobotVacFeatures::from_bits_truncate(bits as u32);
@@ -122,12 +119,32 @@ impl RobotVacState {
 impl From<RobotVacCommand> for CommandSet {
     fn from(cmd: RobotVacCommand) -> Self {
         match cmd {
-            RobotVacCommand::Start => Self { action: "start".into(), value: serde_json::Value::Null, correlation_id: None },
-            RobotVacCommand::Pause => Self { action: "pause".into(), value: serde_json::Value::Null, correlation_id: None },
-            RobotVacCommand::Stop => Self { action: "stop".into(), value: serde_json::Value::Null, correlation_id: None },
-            RobotVacCommand::Dock => Self { action: "dock".into(), value: serde_json::Value::Null, correlation_id: None },
-            RobotVacCommand::Locate => Self { action: "locate".into(), value: serde_json::Value::Null, correlation_id: None },
-            RobotVacCommand::SpotClean => Self { action: "spot_clean".into(), value: serde_json::Value::Null, correlation_id: None },
+            RobotVacCommand::Start => Self {
+                action: "start".into(),
+                value: serde_json::Value::Null,
+                correlation_id: None,
+            },
+            RobotVacCommand::Pause => Self {
+                action: "pause".into(),
+                value: serde_json::Value::Null,
+                correlation_id: None,
+            },
+            RobotVacCommand::Stop => {
+                Self { action: "stop".into(), value: serde_json::Value::Null, correlation_id: None }
+            }
+            RobotVacCommand::Dock => {
+                Self { action: "dock".into(), value: serde_json::Value::Null, correlation_id: None }
+            }
+            RobotVacCommand::Locate => Self {
+                action: "locate".into(),
+                value: serde_json::Value::Null,
+                correlation_id: None,
+            },
+            RobotVacCommand::SpotClean => Self {
+                action: "spot_clean".into(),
+                value: serde_json::Value::Null,
+                correlation_id: None,
+            },
         }
     }
 }
