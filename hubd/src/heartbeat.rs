@@ -43,10 +43,7 @@ mod tests {
     #[tokio::test(start_paused = true)]
     async fn publishes_heartbeats_at_interval() {
         let bus = Arc::new(InMemoryBus::default());
-        let mut sub = bus
-            .subscribe(TOPIC_HEARTBEAT)
-            .await
-            .expect("subscribe heartbeat");
+        let mut sub = bus.subscribe(TOPIC_HEARTBEAT).await.expect("subscribe heartbeat");
 
         spawn_with_interval(bus, Duration::from_secs(1));
 
@@ -59,7 +56,8 @@ mod tests {
         tokio::time::advance(Duration::from_secs(1)).await;
         let second = sub.next().await.expect("second heartbeat");
         assert_eq!(second.topic, TOPIC_HEARTBEAT);
-        let second_hb: Heartbeat = serde_json::from_slice(&second.payload).expect("decode heartbeat");
+        let second_hb: Heartbeat =
+            serde_json::from_slice(&second.payload).expect("decode heartbeat");
         assert!(second_hb.ts >= hb.ts);
     }
 }
