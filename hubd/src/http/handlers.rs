@@ -1,7 +1,7 @@
-use crate::state::AppState;
+use crate::{http::auth::AuthenticatedUser, state::AppState};
 use axum::{
     Json,
-    extract::{Path, State},
+    extract::{Extension, Path, State},
     http::StatusCode,
     response::IntoResponse,
 };
@@ -66,22 +66,25 @@ pub struct SetStateResp {
     ok: bool,
 }
 
-pub async fn set_state_dev_only(
+pub async fn set_state(
     State(app): State<AppState>,
     Path(entity_id): Path<String>,
+    maybe_user: Option<Extension<AuthenticatedUser>>,
     Json(body): Json<SetStateBody>,
 ) -> impl IntoResponse {
     let Ok(eid) = parse_entity_id(&entity_id) else {
         return (StatusCode::BAD_REQUEST, "invalid entity_id").into_response();
     };
     let now = Utc::now();
+    let source =
+        body.source.or_else(|| maybe_user.as_ref().map(|Extension(user)| user.label().to_string()));
     let state = EntityState {
         entity_id: eid,
         value: body.value,
         attributes: body.attributes.into_iter().collect(),
         last_changed: now,
         last_updated: now,
-        source: body.source,
+        source,
     };
     match app.store.set_entity_state(state).await {
         Ok(_) => Json(SetStateResp { ok: true }).into_response(),
@@ -92,6 +95,7 @@ pub async fn set_state_dev_only(
 pub async fn send_command(
     State(app): State<AppState>,
     Path(entity_id): Path<String>,
+    maybe_user: Option<Extension<AuthenticatedUser>>,
     Json(body): Json<serde_json::Value>,
 ) -> impl IntoResponse {
     let Ok(eid) = parse_entity_id(&entity_id) else {
@@ -107,6 +111,8 @@ pub async fn send_command(
     };
     let topic = format!("{TOPIC_COMMAND_PREFIX}{}", (eid.0));
     let payload = Bytes::from(serde_json::to_vec(&cmd).unwrap());
+    let user_label = maybe_user.as_ref().map(|Extension(user)| user.label()).unwrap_or("anonymous");
+    tracing::info!(entity_id = %eid.0, user = %user_label, "sending command" );
     if let Err(e) = app.bus.publish(&topic, payload).await {
         return (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response();
     }

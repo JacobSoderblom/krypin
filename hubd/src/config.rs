@@ -1,4 +1,5 @@
 use anyhow::{self, Result};
+use constant_time_eq::constant_time_eq;
 use dotenv::dotenv;
 use std::{
     fmt::{self, Display, Formatter},
@@ -76,6 +77,7 @@ pub struct Config {
     pub bus: BusKind,
     pub mqtt: MqttConfig,
     pub storage: StorageKind,
+    pub auth: AuthConfig,
 }
 
 impl Default for Config {
@@ -85,6 +87,7 @@ impl Default for Config {
             bus: BusKind::InMem,
             mqtt: MqttConfig::default(),
             storage: StorageKind::InMem,
+            auth: AuthConfig::default(),
         }
     }
 }
@@ -114,7 +117,28 @@ impl Config {
         if let Ok(s) = std::env::var("KRYPIN_STORAGE") {
             c.storage = StorageKind::from_str(&s).unwrap();
         }
+        if let Ok(tokens) =
+            std::env::var("KRYPIN_AUTH_TOKENS").or_else(|_| std::env::var("KRYPIN_AUTH_TOKEN"))
+        {
+            c.auth.tokens =
+                tokens.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
+        }
         Ok(c)
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct AuthConfig {
+    pub tokens: Vec<String>,
+}
+
+impl AuthConfig {
+    pub fn is_enabled(&self) -> bool {
+        !self.tokens.is_empty()
+    }
+
+    pub fn matches(&self, candidate: &str) -> bool {
+        self.tokens.iter().any(|t| constant_time_eq(t.as_bytes(), candidate.as_bytes()))
     }
 }
 

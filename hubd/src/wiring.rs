@@ -24,5 +24,5 @@ pub async fn build_state(cfg: &Config) -> Result<AppState> {
         StorageKind::InMem => Arc::new(InMemoryStorage::default()),
     };
 
-    Ok(AppState { store, bus })
+    Ok(AppState { store, bus, auth: cfg.auth.clone() })
 }
