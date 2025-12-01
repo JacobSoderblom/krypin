@@ -15,6 +15,47 @@ use tokio::time::{Duration, timeout};
 use tokio_stream::StreamExt;
 use uuid::Uuid;
 
+#[test]
+fn zigbee_info_builder_sets_all_fields() {
+    let zigbee = ZigbeeInfo::new("0x00124b0001abcdef")
+        .with_network_address(0x1a2b)
+        .with_endpoints(vec![1, 3, 5])
+        .with_power_source("battery")
+        .with_firmware_version("2.0.1");
+
+    assert_eq!(zigbee.ieee_address, "0x00124b0001abcdef");
+    assert_eq!(zigbee.network_address, Some(0x1a2b));
+    assert_eq!(zigbee.endpoints, Some(vec![1, 3, 5]));
+    assert_eq!(zigbee.power_source.as_deref(), Some("battery"));
+    assert_eq!(zigbee.firmware_version.as_deref(), Some("2.0.1"));
+}
+
+#[test]
+fn zigbee_info_serializes_without_empty_fields() {
+    let zigbee = ZigbeeInfo::new("0x00124b0001abcdef");
+    let value = serde_json::to_value(&zigbee).expect("serialize zigbee");
+
+    assert_eq!(value["ieee_address"], "0x00124b0001abcdef");
+    assert!(value.get("network_address").is_none());
+    assert!(value.get("endpoints").is_none());
+    assert!(value.get("power_source").is_none());
+    assert!(value.get("firmware_version").is_none());
+}
+
+#[test]
+fn device_metadata_map_merges_zigbee() {
+    let mut metadata = BTreeMap::new();
+    metadata.insert("existing".into(), serde_json::json!({"k": "v"}));
+
+    let zigbee = ZigbeeInfo::new("0x00124b0001abcdef");
+    let device = make_device_meta(DeviceId(Uuid::nil()), zigbee.clone());
+
+    let merged = DeviceMeta { metadata, ..device }.metadata_map();
+
+    assert!(merged.contains_key("existing"));
+    assert_eq!(merged.get("zigbee").cloned(), serde_json::to_value(zigbee).ok());
+}
+
 struct NoopDriver {
     description: LightDescription,
     state: Arc<Mutex<LightState>>,
