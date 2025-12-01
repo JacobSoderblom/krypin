@@ -30,6 +30,12 @@ impl AutomationId {
     }
 }
 
+impl Default for AutomationId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AutomationDefinition {
     pub id: AutomationId,
@@ -321,15 +327,15 @@ fn trigger_matches(trigger: &Trigger, event: &TriggerEvent) -> bool {
             if entity_id != ev {
                 return false;
             }
-            if let Some(expected) = from {
-                if old.as_ref() != Some(expected) {
-                    return false;
-                }
+            if let Some(expected) = from
+                && old.as_ref() != Some(expected)
+            {
+                return false;
             }
-            if let Some(expected) = to {
-                if new != expected {
-                    return false;
-                }
+            if let Some(expected) = to
+                && new != expected
+            {
+                return false;
             }
             true
         }
@@ -573,10 +579,7 @@ mod tests {
             .await
             .unwrap();
 
-        engine
-            .handle_event(TriggerEvent::Heartbeat { ts: Utc::now() })
-            .await
-            .unwrap();
+        engine.handle_event(TriggerEvent::Heartbeat { ts: Utc::now() }).await.unwrap();
 
         let latest = storage.latest_entity_state(entity_id).await.unwrap().unwrap();
         assert_eq!(latest.value, Value::Bool(true));
