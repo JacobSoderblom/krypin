@@ -1,6 +1,7 @@
 use std::{collections::BTreeMap, sync::Arc};
 
-use anyhow::{Context, Ok, Result, anyhow};
+use crate::zigbee::ZigbeeInfo;
+use anyhow::{Context, Result, anyhow};
 use async_trait::async_trait;
 use bytes::Bytes;
 use chrono::Utc;
@@ -28,6 +29,7 @@ pub struct DeviceMeta {
     pub hw_version: Option<String>,
     pub area: Option<Uuid>,
     pub metadata: BTreeMap<String, serde_json::Value>,
+    pub zigbee: Option<ZigbeeInfo>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -36,6 +38,18 @@ pub struct EntityMeta {
     pub name: String,
     pub icon: Option<String>,
     pub attributes: BTreeMap<String, serde_json::Value>,
+}
+
+impl DeviceMeta {
+    pub fn metadata_map(&self) -> BTreeMap<String, serde_json::Value> {
+        let mut metadata = self.metadata.clone();
+        if let Some(zigbee) = &self.zigbee
+            && let Ok(value) = serde_json::to_value(zigbee)
+        {
+            metadata.insert("zigbee".into(), value);
+        }
+        metadata
+    }
 }
 
 #[async_trait]
@@ -111,7 +125,7 @@ impl LightComponent {
             sw_version: d.sw_version.clone(),
             hw_version: d.hw_version.clone(),
             area: d.area,
-            metadata: d.metadata.clone(),
+            metadata: d.metadata_map(),
         };
         let bytes = Bytes::from(serde_json::to_vec(&msg)?);
         self.bus.publish(TOPIC_DEVICE_ANNOUNCE, bytes).await?;
