@@ -8,6 +8,8 @@ use sqlx::{
 };
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, RwLock};
+use std::time::Duration;
+use tokio::time::sleep;
 use uuid::Uuid;
 
 #[async_trait]
@@ -41,11 +43,25 @@ pub struct PostgresStorage {
 
 impl PostgresStorage {
     pub async fn connect(database_url: &str) -> Result<Self> {
-        let pool = PgPoolOptions::new().max_connections(10).connect(database_url).await?;
+        const MAX_ATTEMPTS: u32 = 20;
+        let mut last_err: Option<anyhow::Error> = None;
 
-        sqlx::migrate!().run(&pool).await?;
+        for attempt in 1..=MAX_ATTEMPTS {
+            match PgPoolOptions::new().max_connections(10).connect(database_url).await {
+                Ok(pool) => match sqlx::migrate!().run(&pool).await {
+                    Ok(_) => return Ok(Self { pool }),
+                    Err(err) => last_err = Some(err.into()),
+                },
+                Err(err) => last_err = Some(err.into()),
+            }
 
-        Ok(Self { pool })
+            if attempt < MAX_ATTEMPTS {
+                sleep(Duration::from_millis(500)).await;
+            }
+        }
+
+        let err = last_err.unwrap_or_else(|| anyhow!("failed to connect to postgres"));
+        Err(err).context(format!("failed to connect to postgres after {MAX_ATTEMPTS} attempts"))
     }
 
     fn parse_entity_domain(domain: String) -> Result<EntityDomain> {

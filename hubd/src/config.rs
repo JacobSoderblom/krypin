@@ -79,14 +79,8 @@ pub struct Config {
     pub bind: SocketAddr,
     pub bus: BusKind,
     pub mqtt: MqttConfig,
-<<<<<<< HEAD
-    pub storage: StorageKind,
     pub auth: AuthConfig,
-||||||| parent of 1ad4dab (Move Postgres storage integration test into tests dir)
-    pub storage: StorageKind,
-=======
     pub storage: StorageConfig,
->>>>>>> 1ad4dab (Move Postgres storage integration test into tests dir)
 }
 
 impl Default for Config {
@@ -95,14 +89,8 @@ impl Default for Config {
             bind: "127.0.0.1:8080".parse().unwrap(),
             bus: BusKind::InMem,
             mqtt: MqttConfig::default(),
-<<<<<<< HEAD
-            storage: StorageKind::InMem,
             auth: AuthConfig::default(),
-||||||| parent of 1ad4dab (Move Postgres storage integration test into tests dir)
-            storage: StorageKind::InMem,
-=======
             storage: StorageConfig::default(),
->>>>>>> 1ad4dab (Move Postgres storage integration test into tests dir)
         }
     }
 }

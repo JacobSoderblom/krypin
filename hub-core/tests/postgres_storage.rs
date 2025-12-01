@@ -1,4 +1,4 @@
-use chrono::Duration;
+use chrono::{DateTime, Duration, Timelike, Utc};
 use hub_core::{
     model::{Area, AreaId, Device, DeviceId, Entity, EntityDomain, EntityId, EntityState},
     storage::{PostgresStorage, Storage},
@@ -19,6 +19,12 @@ fn postgres_image() -> testcontainers::ContainerRequest<GenericImage> {
         .with_env_var("POSTGRES_PASSWORD", "password")
         .with_env_var("POSTGRES_USER", "postgres")
         .with_env_var("POSTGRES_DB", "hub")
+}
+
+fn truncate_to_pg_precision(ts: DateTime<Utc>) -> DateTime<Utc> {
+    // Postgres timestamptz stores microsecond precision; drop sub-micro fractional nanos.
+    let micros = ts.timestamp_subsec_micros();
+    ts.with_nanosecond(micros * 1000).expect("valid timestamp")
 }
 
 #[tokio::test]
@@ -68,13 +74,13 @@ async fn postgres_storage_persists_entities_and_state() -> Result<(), Testcontai
     storage.upsert_entity(entity.clone()).await.unwrap();
     assert_eq!(storage.get_entity(entity.id).await.unwrap(), Some(entity.clone()));
 
-    let base_time = chrono::Utc::now();
+    let base_time = truncate_to_pg_precision(Utc::now());
     let state1 = EntityState {
         entity_id: entity.id,
         value: json!({"state": "off"}),
         attributes: BTreeMap::new(),
-        last_changed: base_time,
-        last_updated: base_time,
+        last_changed: truncate_to_pg_precision(base_time),
+        last_updated: truncate_to_pg_precision(base_time),
         source: Some("test".into()),
     };
     storage.set_entity_state(state1.clone()).await.unwrap();
@@ -83,8 +89,8 @@ async fn postgres_storage_persists_entities_and_state() -> Result<(), Testcontai
         entity_id: entity.id,
         value: json!({"state": "on"}),
         attributes: BTreeMap::new(),
-        last_changed: base_time + Duration::seconds(1),
-        last_updated: base_time + Duration::seconds(1),
+        last_changed: truncate_to_pg_precision(base_time + Duration::seconds(1)),
+        last_updated: truncate_to_pg_precision(base_time + Duration::seconds(1)),
         source: Some("test".into()),
     };
     storage.set_entity_state(state2.clone()).await.unwrap();
@@ -93,8 +99,8 @@ async fn postgres_storage_persists_entities_and_state() -> Result<(), Testcontai
         entity_id: entity.id,
         value: json!({"state": "dim", "brightness": 50}),
         attributes: BTreeMap::new(),
-        last_changed: base_time + Duration::seconds(2),
-        last_updated: base_time + Duration::seconds(2),
+        last_changed: truncate_to_pg_precision(base_time + Duration::seconds(2)),
+        last_updated: truncate_to_pg_precision(base_time + Duration::seconds(2)),
         source: Some("test".into()),
     };
     storage.set_entity_state(state3.clone()).await.unwrap();
