@@ -22,6 +22,7 @@ pub struct Event {
 pub struct Message {
     pub topic: String,
     pub payload: Bytes,
+    pub received_at: DateTime<Utc>,
 }
 
 #[async_trait]
@@ -48,7 +49,8 @@ impl Default for InMemoryBus {
 #[async_trait::async_trait]
 impl Bus for InMemoryBus {
     async fn publish(&self, topic: &str, payload: Bytes) -> anyhow::Result<()> {
-        let _ = self.tx.send(Message { topic: topic.to_string(), payload });
+        let _ =
+            self.tx.send(Message { topic: topic.to_string(), payload, received_at: Utc::now() });
         Ok(())
     }
 

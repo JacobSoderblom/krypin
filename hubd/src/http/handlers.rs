@@ -11,6 +11,7 @@ use hub_core::{
     bus_contract::{CommandSet, TOPIC_COMMAND_PREFIX},
     model::{EntityId, EntityState},
 };
+use metrics::counter;
 use uuid::Uuid;
 
 pub async fn healthz() -> impl IntoResponse {
@@ -114,8 +115,10 @@ pub async fn send_command(
     let user_label = maybe_user.as_ref().map(|Extension(user)| user.label()).unwrap_or("anonymous");
     tracing::info!(entity_id = %eid.0, user = %user_label, "sending command" );
     if let Err(e) = app.bus.publish(&topic, payload).await {
+        counter!("bus.publish.failures").increment(1);
         return (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response();
     }
+    counter!("bus.publish.success").increment(1);
     (StatusCode::ACCEPTED, "").into_response()
 }
 

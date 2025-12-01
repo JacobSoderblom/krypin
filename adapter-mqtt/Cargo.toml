@@ -12,3 +12,4 @@ rumqttc = "0.24"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time", "net", "process"] }
 tokio-stream = "0.1"
 tracing = "0.1"
+chrono = { version = "0.4.42", default-features = false, features = ["clock"] }

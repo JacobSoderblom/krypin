@@ -3,6 +3,7 @@ use std::{sync::Arc, time::Duration};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use bytes::Bytes;
+use chrono::Utc;
 use hub_core::bus::{Bus, Message};
 use rumqttc::{AsyncClient, Event, Incoming, MqttOptions, QoS};
 use tokio::sync::broadcast;
@@ -34,6 +35,7 @@ impl MqttBus {
                         let _ = forwarder_tx.send(Message {
                             topic: p.topic,
                             payload: Bytes::from(p.payload.to_vec()),
+                            received_at: Utc::now(),
                         });
                     }
                     Ok(_) => {}

@@ -22,6 +22,7 @@ anyhow = "1.0.100"
 constant_time_eq = "0.3.0"
 dotenv = "0.15.0"
 url = "2.5.4"
+metrics = "0.23"
 
 [dev-dependencies]
 async-trait = "0.1"

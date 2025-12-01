@@ -96,7 +96,11 @@ struct RecordingBus {
 #[async_trait]
 impl hub_core::bus::Bus for RecordingBus {
     async fn publish(&self, topic: &str, payload: bytes::Bytes) -> Result<()> {
-        self.messages.lock().unwrap().push(Message { topic: topic.to_string(), payload });
+        self.messages.lock().unwrap().push(Message {
+            topic: topic.to_string(),
+            payload,
+            received_at: chrono::Utc::now(),
+        });
         Ok(())
     }
 
