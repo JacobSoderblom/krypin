@@ -55,6 +55,7 @@ pub enum EntityDomain {
     Lock,
     MediaPlayer,
     Climate,
+    RobotVacuum,
     Other,
 }
 
