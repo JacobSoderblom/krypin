@@ -43,10 +43,10 @@ pub struct EntityMeta {
 impl DeviceMeta {
     pub fn metadata_map(&self) -> BTreeMap<String, serde_json::Value> {
         let mut metadata = self.metadata.clone();
-        if let Some(zigbee) = &self.zigbee {
-            if let Ok(value) = serde_json::to_value(zigbee) {
-                metadata.insert("zigbee".into(), value);
-            }
+        if let Some(zigbee) = &self.zigbee
+            && let Ok(value) = serde_json::to_value(zigbee)
+        {
+            metadata.insert("zigbee".into(), value);
         }
         metadata
     }
