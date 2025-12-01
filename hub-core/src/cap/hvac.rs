@@ -69,7 +69,8 @@ impl HvacDescription {
         match cmd {
             HvacCommand::SetMode { mode } => {
                 if self.features.contains(HvacFeatures::MODES) {
-                    if matches!(mode, HvacMode::Off) && !self.features.contains(HvacFeatures::ONOFF) {
+                    if matches!(mode, HvacMode::Off) && !self.features.contains(HvacFeatures::ONOFF)
+                    {
                         Err("on/off unsupported")
                     } else {
                         Ok(())
@@ -82,15 +83,15 @@ impl HvacDescription {
                 if !self.features.contains(HvacFeatures::TARGET_TEMPERATURE) {
                     return Err("temperature unsupported");
                 }
-                if let Some(min) = self.min_temp {
-                    if temperature.0 < min.0 {
-                        return Err("temperature below minimum");
-                    }
+                if let Some(min) = self.min_temp
+                    && temperature.0 < min.0
+                {
+                    return Err("temperature below minimum");
                 }
-                if let Some(max) = self.max_temp {
-                    if temperature.0 > max.0 {
-                        return Err("temperature above maximum");
-                    }
+                if let Some(max) = self.max_temp
+                    && temperature.0 > max.0
+                {
+                    return Err("temperature above maximum");
                 }
                 Ok(())
             }
@@ -163,18 +164,15 @@ impl HvacState {
             .get("ambient_temperature_c")
             .and_then(|v| v.as_f64())
             .map(|v| Temperature(v as f32));
-        let fan_mode = attrs
-            .get("fan_mode")
-            .and_then(|v| v.as_str())
-            .and_then(|s| match s {
-                "auto" => Some(HvacFanMode::Auto),
-                "low" => Some(HvacFanMode::Low),
-                "medium" => Some(HvacFanMode::Medium),
-                "high" => Some(HvacFanMode::High),
-                "turbo" => Some(HvacFanMode::Turbo),
-                "quiet" => Some(HvacFanMode::Quiet),
-                _ => None,
-            });
+        let fan_mode = attrs.get("fan_mode").and_then(|v| v.as_str()).and_then(|s| match s {
+            "auto" => Some(HvacFanMode::Auto),
+            "low" => Some(HvacFanMode::Low),
+            "medium" => Some(HvacFanMode::Medium),
+            "high" => Some(HvacFanMode::High),
+            "turbo" => Some(HvacFanMode::Turbo),
+            "quiet" => Some(HvacFanMode::Quiet),
+            _ => None,
+        });
 
         Some(HvacState { mode, target_temperature, ambient_temperature, fan_mode })
     }

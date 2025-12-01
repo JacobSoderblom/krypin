@@ -1,11 +1,11 @@
 use anyhow::{self, Result};
 use dotenv::dotenv;
-use url::Url;
 use std::{
     fmt::{self, Display, Formatter},
     net::SocketAddr,
     str::FromStr,
 };
+use url::Url;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum BusKind {
@@ -127,11 +127,7 @@ pub struct MqttConfig {
 
 impl Default for MqttConfig {
     fn default() -> Self {
-        Self {
-            host: "127.0.0.1".to_string(),
-            port: 1883,
-            client_id: "hubd".to_string(),
-        }
+        Self { host: "127.0.0.1".to_string(), port: 1883, client_id: "hubd".to_string() }
     }
 }
 
@@ -142,10 +138,8 @@ impl MqttConfig {
             anyhow::bail!("unsupported mqtt url scheme: {}", url.scheme());
         }
 
-        let host = url
-            .host_str()
-            .ok_or_else(|| anyhow::anyhow!("mqtt url missing host"))?
-            .to_string();
+        let host =
+            url.host_str().ok_or_else(|| anyhow::anyhow!("mqtt url missing host"))?.to_string();
         let port = url.port().unwrap_or(1883);
         let client_id = url
             .query_pairs()
@@ -153,10 +147,6 @@ impl MqttConfig {
             .map(|(_, v)| v.into_owned())
             .unwrap_or_else(|| "hubd".to_string());
 
-        Ok(Self {
-            host,
-            port,
-            client_id,
-        })
+        Ok(Self { host, port, client_id })
     }
 }

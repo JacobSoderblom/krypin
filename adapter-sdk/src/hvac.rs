@@ -180,7 +180,9 @@ impl HvacCommandMapper {
                     .or_else(|| value.get("temperature"))
                     .and_then(|v| v.as_f64())
                 {
-                    return Ok(HvacCommand::SetTargetTemperature { temperature: Temperature(temp as f32) });
+                    return Ok(HvacCommand::SetTargetTemperature {
+                        temperature: Temperature(temp as f32),
+                    });
                 }
                 if let Some(fan) = value.get("fan_mode").and_then(Self::parse_fan_mode) {
                     return Ok(HvacCommand::SetFanMode { fan_mode: fan });
@@ -215,15 +217,17 @@ impl HvacStateMapper {
 
         StateUpdate {
             entity_id,
-            value: serde_json::Value::String(match state.mode {
-                HvacMode::Off => "off",
-                HvacMode::Heat => "heat",
-                HvacMode::Cool => "cool",
-                HvacMode::Auto => "auto",
-                HvacMode::Dry => "dry",
-                HvacMode::FanOnly => "fan_only",
-            }
-            .into()),
+            value: serde_json::Value::String(
+                match state.mode {
+                    HvacMode::Off => "off",
+                    HvacMode::Heat => "heat",
+                    HvacMode::Cool => "cool",
+                    HvacMode::Auto => "auto",
+                    HvacMode::Dry => "dry",
+                    HvacMode::FanOnly => "fan_only",
+                }
+                .into(),
+            ),
             attributes,
             ts: Utc::now(),
             source: Some("adapter-sdk:hvac".into()),

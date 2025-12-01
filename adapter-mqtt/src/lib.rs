@@ -59,7 +59,10 @@ impl Bus for MqttBus {
         Ok(())
     }
 
-    async fn subscribe(&self, pattern: &str) -> Result<Box<dyn Stream<Item = Message> + Unpin + Send>> {
+    async fn subscribe(
+        &self,
+        pattern: &str,
+    ) -> Result<Box<dyn Stream<Item = Message> + Unpin + Send>> {
         let rx = self.tx.subscribe();
         let pattern = pattern.to_string();
         let stream = BroadcastStream::new(rx).filter_map(move |item| {
@@ -92,8 +95,12 @@ fn topic_matches(pattern: &str, topic: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::{io::ErrorKind, net::TcpListener, process::{Child, Command, Stdio}};
-    use tokio::time::{sleep, Duration};
+    use std::{
+        io::ErrorKind,
+        net::TcpListener,
+        process::{Child, Command, Stdio},
+    };
+    use tokio::time::{Duration, sleep};
 
     struct MosquittoGuard(Child);
 
@@ -135,7 +142,10 @@ mod tests {
     async fn publishes_and_receives() -> Result<()> {
         let (_guard, port) = match start_broker().await {
             Ok(ok) => ok,
-            Err(e) if e.downcast_ref::<std::io::Error>().map(|io| io.kind()) == Some(ErrorKind::NotFound) => {
+            Err(e)
+                if e.downcast_ref::<std::io::Error>().map(|io| io.kind())
+                    == Some(ErrorKind::NotFound) =>
+            {
                 eprintln!("skipping publishes_and_receives: mosquitto not installed");
                 return Ok(());
             }
@@ -144,8 +154,7 @@ mod tests {
         let bus = MqttBus::connect("127.0.0.1", port, "test-client").await?;
 
         let mut stream = bus.subscribe("test/topic").await?;
-        bus.publish("test/topic", Bytes::from_static(b"hello"))
-            .await?;
+        bus.publish("test/topic", Bytes::from_static(b"hello")).await?;
 
         let msg = stream.next().await.expect("message expected");
         assert_eq!(msg.topic, "test/topic");
@@ -157,7 +166,10 @@ mod tests {
     async fn pattern_filtering() -> Result<()> {
         let (_guard, port) = match start_broker().await {
             Ok(ok) => ok,
-            Err(e) if e.downcast_ref::<std::io::Error>().map(|io| io.kind()) == Some(ErrorKind::NotFound) => {
+            Err(e)
+                if e.downcast_ref::<std::io::Error>().map(|io| io.kind())
+                    == Some(ErrorKind::NotFound) =>
+            {
                 eprintln!("skipping pattern_filtering: mosquitto not installed");
                 return Ok(());
             }
@@ -166,10 +178,8 @@ mod tests {
         let bus = MqttBus::connect("127.0.0.1", port, "test-filter").await?;
 
         let mut stream = bus.subscribe("sensor.*").await?;
-        bus.publish("sensor.temp", Bytes::from_static(b"20"))
-            .await?;
-        bus.publish("other", Bytes::from_static(b"ignore"))
-            .await?;
+        bus.publish("sensor.temp", Bytes::from_static(b"20")).await?;
+        bus.publish("other", Bytes::from_static(b"ignore")).await?;
 
         let msg = stream.next().await.expect("filtered message");
         assert_eq!(msg.topic, "sensor.temp");

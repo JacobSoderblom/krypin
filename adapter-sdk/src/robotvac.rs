@@ -144,15 +144,17 @@ impl RobotVacStateMapper {
 
         StateUpdate {
             entity_id,
-            value: serde_json::Value::String(match state.status {
-                RobotVacStatus::Idle => "idle",
-                RobotVacStatus::Cleaning => "cleaning",
-                RobotVacStatus::Paused => "paused",
-                RobotVacStatus::Returning => "returning",
-                RobotVacStatus::Docked => "docked",
-                RobotVacStatus::Error => "error",
-            }
-            .into()),
+            value: serde_json::Value::String(
+                match state.status {
+                    RobotVacStatus::Idle => "idle",
+                    RobotVacStatus::Cleaning => "cleaning",
+                    RobotVacStatus::Paused => "paused",
+                    RobotVacStatus::Returning => "returning",
+                    RobotVacStatus::Docked => "docked",
+                    RobotVacStatus::Error => "error",
+                }
+                .into(),
+            ),
             attributes,
             ts: Utc::now(),
             source: Some("adapter-sdk:robotvac".into()),
