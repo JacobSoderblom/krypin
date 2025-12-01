@@ -17,5 +17,7 @@ tracing = "0.1.41"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 uuid = "1.18.1"
 hub-core = { path = "../hub-core" }
+adapter-mqtt = { path = "../adapter-mqtt" }
 anyhow = "1.0.100"
 dotenv = "0.15.0"
+url = "2.5.4"
