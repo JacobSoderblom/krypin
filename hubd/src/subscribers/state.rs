@@ -1,5 +1,6 @@
 use crate::state::AppState;
 use chrono::Utc;
+use automations::TriggerEvent;
 use hub_core::bus_contract::{StateUpdate, TOPIC_STATE_UPDATE_PREFIX};
 use metrics::{counter, histogram};
 use tokio_stream::StreamExt;
@@ -13,6 +14,14 @@ pub fn spawn(app: AppState) {
                 histogram!("bus.message.latency_ms").record(latency_ms as f64);
                 match serde_json::from_slice::<StateUpdate>(&msg.payload) {
                     Ok(v) => {
+                        let new_value = v.value.clone();
+                        let previous = app
+                            .store
+                            .latest_entity_state(v.entity_id)
+                            .await
+                            .ok()
+                            .flatten()
+                            .map(|s| s.value);
                         let st = hub_core::model::EntityState {
                             entity_id: v.entity_id,
                             value: v.value,
@@ -24,6 +33,18 @@ pub fn spawn(app: AppState) {
                         if let Err(e) = app.store.set_entity_state(st).await {
                             counter!("bus.message.handle_error").increment(1);
                             tracing::warn!("state set failed: {e}");
+                        }
+
+                        if let Err(e) = app
+                            .automations
+                            .handle_event(TriggerEvent::StateChanged {
+                                entity_id: v.entity_id,
+                                from: previous,
+                                to: new_value,
+                            })
+                            .await
+                        {
+                            tracing::warn!("automation dispatch failed: {e}");
                         }
                     }
                     Err(e) => {
