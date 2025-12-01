@@ -7,7 +7,7 @@ use chrono::Utc;
 use hub_core::{
     bus::Bus,
     bus_contract::{
-        DeviceAnnounce, EntityAnnounce, StateUpdate, TOPIC_DEVICE_ANNOUNCE,
+        DeviceAnnounce, EntityAnnounce, StateUpdate, TOPIC_DEVICE_ANNOUNCE, TOPIC_ENTITY_ANNOUNCE,
         TOPIC_STATE_UPDATE_PREFIX,
     },
     cap::sensor::{BinarySensorDescription, BinarySensorState},
@@ -15,7 +15,7 @@ use hub_core::{
 };
 use tokio_stream::{Stream, StreamExt};
 
-use crate::light::{DeviceMeta, EntityMeta};
+use crate::meta::{DeviceMeta, EntityMeta};
 
 #[async_trait]
 pub trait BinarySensorDriver: Send + Sync + 'static {
@@ -112,7 +112,7 @@ impl BinarySensorComponent {
             attributes: e.attributes.clone(),
         };
         let bytes = Bytes::from(serde_json::to_vec(&msg)?);
-        self.bus.publish(TOPIC_DEVICE_ANNOUNCE, bytes).await?;
+        self.bus.publish(TOPIC_ENTITY_ANNOUNCE, bytes).await?;
         Ok(())
     }
 }

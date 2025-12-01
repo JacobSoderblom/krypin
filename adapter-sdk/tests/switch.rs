@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 
 use adapter_sdk::{
-    light::{DeviceMeta, EntityMeta},
+    meta::{DeviceMeta, EntityMeta},
     switch::{SwitchComponent, SwitchDriver},
 };
 use anyhow::Result;
@@ -11,7 +11,8 @@ use bytes::Bytes;
 use hub_core::{
     bus::{Bus, InMemoryBus},
     bus_contract::{
-        StateUpdate, TOPIC_COMMAND_PREFIX, TOPIC_DEVICE_ANNOUNCE, TOPIC_STATE_UPDATE_PREFIX,
+        StateUpdate, TOPIC_COMMAND_PREFIX, TOPIC_DEVICE_ANNOUNCE, TOPIC_ENTITY_ANNOUNCE,
+        TOPIC_STATE_UPDATE_PREFIX,
     },
     cap::switch::{SwitchCommand, SwitchDescription, SwitchFeatures, SwitchState},
     model::{DeviceId, EntityId},
@@ -135,15 +136,18 @@ async fn handles_set_command_and_emits_state() -> Result<()> {
     let mut state_sub =
         bus_impl.subscribe(&format!("{TOPIC_STATE_UPDATE_PREFIX}{}", entity_id.0)).await?;
     let mut device_sub = bus_impl.subscribe(TOPIC_DEVICE_ANNOUNCE).await?;
+    let mut entity_sub = bus_impl.subscribe(TOPIC_ENTITY_ANNOUNCE).await?;
 
     component.clone().spawn().await?;
 
-    for _ in 0..2 {
-        timeout(Duration::from_millis(200), device_sub.next())
-            .await
-            .expect("announce not received")
-            .expect("announce stream closed unexpectedly");
-    }
+    timeout(Duration::from_millis(200), device_sub.next())
+        .await
+        .expect("device announce not received")
+        .expect("announce stream closed unexpectedly");
+    timeout(Duration::from_millis(200), entity_sub.next())
+        .await
+        .expect("entity announce not received")
+        .expect("entity stream closed unexpectedly");
 
     let command_topic = format!("{TOPIC_COMMAND_PREFIX}{}", entity_id.0);
     let command_payload = json!({ "action": "set", "value": { "on": true } });
@@ -182,15 +186,18 @@ async fn handles_toggle_command() -> Result<()> {
     let mut state_sub =
         bus_impl.subscribe(&format!("{TOPIC_STATE_UPDATE_PREFIX}{}", entity_id.0)).await?;
     let mut device_sub = bus_impl.subscribe(TOPIC_DEVICE_ANNOUNCE).await?;
+    let mut entity_sub = bus_impl.subscribe(TOPIC_ENTITY_ANNOUNCE).await?;
 
     component.clone().spawn().await?;
 
-    for _ in 0..2 {
-        timeout(Duration::from_millis(200), device_sub.next())
-            .await
-            .expect("announce not received")
-            .expect("announce stream closed unexpectedly");
-    }
+    timeout(Duration::from_millis(200), device_sub.next())
+        .await
+        .expect("device announce not received")
+        .expect("announce stream closed unexpectedly");
+    timeout(Duration::from_millis(200), entity_sub.next())
+        .await
+        .expect("entity announce not received")
+        .expect("entity stream closed unexpectedly");
 
     let command_topic = format!("{TOPIC_COMMAND_PREFIX}{}", entity_id.0);
     let command_payload = json!({ "action": "toggle" });
