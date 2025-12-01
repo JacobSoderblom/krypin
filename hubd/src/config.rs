@@ -44,6 +44,7 @@ impl Display for BusKind {
 #[derive(Clone, Debug, PartialEq)]
 pub enum StorageKind {
     InMem,
+    Postgres,
 }
 
 impl FromStr for StorageKind {
@@ -52,6 +53,7 @@ impl FromStr for StorageKind {
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
             "inmem" => Ok(StorageKind::InMem),
+            "postgres" => Ok(StorageKind::Postgres),
             _ => Err(()),
         }
     }
@@ -61,6 +63,7 @@ impl StorageKind {
     fn as_str(&self) -> &'static str {
         match self {
             StorageKind::InMem => "inmem",
+            StorageKind::Postgres => "postgres",
         }
     }
 }
@@ -76,8 +79,14 @@ pub struct Config {
     pub bind: SocketAddr,
     pub bus: BusKind,
     pub mqtt: MqttConfig,
+<<<<<<< HEAD
     pub storage: StorageKind,
     pub auth: AuthConfig,
+||||||| parent of 1ad4dab (Move Postgres storage integration test into tests dir)
+    pub storage: StorageKind,
+=======
+    pub storage: StorageConfig,
+>>>>>>> 1ad4dab (Move Postgres storage integration test into tests dir)
 }
 
 impl Default for Config {
@@ -86,8 +95,14 @@ impl Default for Config {
             bind: "127.0.0.1:8080".parse().unwrap(),
             bus: BusKind::InMem,
             mqtt: MqttConfig::default(),
+<<<<<<< HEAD
             storage: StorageKind::InMem,
             auth: AuthConfig::default(),
+||||||| parent of 1ad4dab (Move Postgres storage integration test into tests dir)
+            storage: StorageKind::InMem,
+=======
+            storage: StorageConfig::default(),
+>>>>>>> 1ad4dab (Move Postgres storage integration test into tests dir)
         }
     }
 }
@@ -115,7 +130,10 @@ impl Config {
             c.mqtt.client_id = s;
         }
         if let Ok(s) = std::env::var("KRYPIN_STORAGE") {
-            c.storage = StorageKind::from_str(&s).unwrap();
+            c.storage.kind = StorageKind::from_str(&s).unwrap();
+        }
+        if let Ok(url) = std::env::var("KRYPIN_DATABASE_URL") {
+            c.storage.database_url = Some(url);
         }
         if let Ok(tokens) =
             std::env::var("KRYPIN_AUTH_TOKENS").or_else(|_| std::env::var("KRYPIN_AUTH_TOKEN"))
@@ -139,6 +157,18 @@ impl AuthConfig {
 
     pub fn matches(&self, candidate: &str) -> bool {
         self.tokens.iter().any(|t| constant_time_eq(t.as_bytes(), candidate.as_bytes()))
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct StorageConfig {
+    pub kind: StorageKind,
+    pub database_url: Option<String>,
+}
+
+impl Default for StorageConfig {
+    fn default() -> Self {
+        Self { kind: StorageKind::InMem, database_url: None }
     }
 }
 

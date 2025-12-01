@@ -4,7 +4,7 @@ use adapter_mqtt::MqttBus;
 use anyhow::{Ok, Result};
 use hub_core::{
     bus::{Bus, InMemoryBus},
-    storage::{InMemoryStorage, Storage},
+    storage::{InMemoryStorage, PostgresStorage, Storage},
 };
 
 use crate::{
@@ -20,8 +20,14 @@ pub async fn build_state(cfg: &Config) -> Result<AppState> {
         }
     };
 
-    let store: Arc<dyn Storage> = match cfg.storage {
+    let store: Arc<dyn Storage> = match cfg.storage.kind {
         StorageKind::InMem => Arc::new(InMemoryStorage::default()),
+        StorageKind::Postgres => {
+            let Some(url) = cfg.storage.database_url.as_ref() else {
+                anyhow::bail!("KRYPIN_DATABASE_URL is required for postgres storage");
+            };
+            Arc::new(PostgresStorage::connect(url).await?)
+        }
     };
 
     Ok(AppState { store, bus, auth: cfg.auth.clone() })
