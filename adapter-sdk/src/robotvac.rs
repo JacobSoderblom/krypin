@@ -8,14 +8,14 @@ use hub_core::{
     bus::Bus,
     bus_contract::{
         DeviceAnnounce, EntityAnnounce, StateUpdate, TOPIC_COMMAND_PREFIX, TOPIC_DEVICE_ANNOUNCE,
-        TOPIC_STATE_UPDATE_PREFIX,
+        TOPIC_ENTITY_ANNOUNCE, TOPIC_STATE_UPDATE_PREFIX,
     },
     cap::robotvac::{RobotVacCommand, RobotVacDescription, RobotVacState, RobotVacStatus},
     model::{EntityDomain, EntityId},
 };
 use tokio_stream::StreamExt;
 
-pub use crate::light::{DeviceMeta, EntityMeta};
+pub use crate::meta::{DeviceMeta, EntityMeta};
 
 #[async_trait]
 pub trait RobotVacDriver: Send + Sync + 'static {
@@ -110,7 +110,7 @@ impl RobotVacComponent {
             attributes: entity.attributes.clone(),
         };
         let bytes = Bytes::from(serde_json::to_vec(&message)?);
-        self.bus.publish(TOPIC_DEVICE_ANNOUNCE, bytes).await?;
+        self.bus.publish(TOPIC_ENTITY_ANNOUNCE, bytes).await?;
         Ok(())
     }
 }

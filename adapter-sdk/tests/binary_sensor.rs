@@ -2,14 +2,16 @@ use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 
 use adapter_sdk::{
-    light::{DeviceMeta, EntityMeta},
+    meta::{DeviceMeta, EntityMeta},
     sensor::{BinarySensorComponent, BinarySensorDriver},
 };
 use anyhow::{Result, anyhow};
 use async_trait::async_trait;
 use hub_core::{
     bus::{Bus, InMemoryBus},
-    bus_contract::{StateUpdate, TOPIC_DEVICE_ANNOUNCE, TOPIC_STATE_UPDATE_PREFIX},
+    bus_contract::{
+        StateUpdate, TOPIC_DEVICE_ANNOUNCE, TOPIC_ENTITY_ANNOUNCE, TOPIC_STATE_UPDATE_PREFIX,
+    },
     cap::sensor::{BinarySensorDescription, BinarySensorDeviceClass, BinarySensorState},
     model::{DeviceId, EntityId},
 };
@@ -106,17 +108,19 @@ async fn publishes_initial_and_subsequent_updates() -> Result<()> {
 
     let mut state_sub =
         bus_impl.subscribe(&format!("{TOPIC_STATE_UPDATE_PREFIX}{}", entity_id.0)).await?;
-    let mut announce_sub = bus_impl.subscribe(TOPIC_DEVICE_ANNOUNCE).await?;
+    let mut device_sub = bus_impl.subscribe(TOPIC_DEVICE_ANNOUNCE).await?;
+    let mut entity_sub = bus_impl.subscribe(TOPIC_ENTITY_ANNOUNCE).await?;
 
     component.clone().spawn().await?;
 
-    // consume the two announce messages
-    for _ in 0..2 {
-        let _ = timeout(Duration::from_millis(200), announce_sub.next())
-            .await
-            .expect("announce not received")
-            .expect("announce stream closed unexpectedly");
-    }
+    let _ = timeout(Duration::from_millis(200), device_sub.next())
+        .await
+        .expect("device announce not received")
+        .expect("announce stream closed unexpectedly");
+    let _ = timeout(Duration::from_millis(200), entity_sub.next())
+        .await
+        .expect("entity announce not received")
+        .expect("announce stream closed unexpectedly");
 
     let message = timeout(Duration::from_millis(200), state_sub.next())
         .await

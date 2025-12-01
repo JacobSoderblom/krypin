@@ -1,14 +1,18 @@
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 
-use adapter_sdk::light::{DeviceMeta, EntityMeta, LightComponent, LightDriver};
+use adapter_sdk::{
+    light::{LightComponent, LightDriver},
+    meta::{DeviceMeta, EntityMeta},
+};
 use anyhow::Result;
 use async_trait::async_trait;
 use bytes::Bytes;
 use hub_core::{
-    bus::{Bus, InMemoryBus},
+    bus::{Bus, InMemoryBus, Message},
     bus_contract::{
-        StateUpdate, TOPIC_COMMAND_PREFIX, TOPIC_DEVICE_ANNOUNCE, TOPIC_STATE_UPDATE_PREFIX,
+        StateUpdate, TOPIC_COMMAND_PREFIX, TOPIC_DEVICE_ANNOUNCE, TOPIC_ENTITY_ANNOUNCE,
+        TOPIC_STATE_UPDATE_PREFIX,
     },
     cap::light::{
         Brightness, LightColor, LightCommand, LightDescription, LightFeatures, LightState, Mireds,
@@ -71,6 +75,21 @@ fn make_device_meta(device_id: DeviceId) -> DeviceMeta {
 
 fn make_entity_meta(entity_id: EntityId) -> EntityMeta {
     EntityMeta { id: entity_id, name: "Test Light".into(), icon: None, attributes: BTreeMap::new() }
+}
+
+async fn wait_for_announcements(
+    device_sub: &mut (impl tokio_stream::Stream<Item = Message> + Unpin),
+    entity_sub: &mut (impl tokio_stream::Stream<Item = Message> + Unpin),
+) -> Result<()> {
+    timeout(Duration::from_millis(200), device_sub.next())
+        .await
+        .expect("device announce not received")
+        .expect("announce stream closed unexpectedly");
+    timeout(Duration::from_millis(200), entity_sub.next())
+        .await
+        .expect("entity announce not received")
+        .expect("announce stream closed unexpectedly");
+    Ok(())
 }
 
 #[tokio::test]
@@ -154,15 +173,9 @@ async fn handles_set_power_command_and_emits_state() -> Result<()> {
     let mut state_sub =
         bus_impl.subscribe(&format!("{TOPIC_STATE_UPDATE_PREFIX}{}", entity_id.0)).await?;
     let mut device_sub = bus_impl.subscribe(TOPIC_DEVICE_ANNOUNCE).await?;
-
+    let mut entity_sub = bus_impl.subscribe(TOPIC_ENTITY_ANNOUNCE).await?;
     component.clone().spawn().await?;
-
-    for _ in 0..2 {
-        timeout(Duration::from_millis(200), device_sub.next())
-            .await
-            .expect("announce not received")
-            .expect("announce stream closed unexpectedly");
-    }
+    wait_for_announcements(&mut device_sub, &mut entity_sub).await?;
 
     let command_topic = format!("{TOPIC_COMMAND_PREFIX}{}", entity_id.0);
     let command_payload = json!({ "action": "set", "value": { "on": true } });
@@ -206,15 +219,9 @@ async fn handles_set_brightness_command_with_transition() -> Result<()> {
     let mut state_sub =
         bus_impl.subscribe(&format!("{TOPIC_STATE_UPDATE_PREFIX}{}", entity_id.0)).await?;
     let mut device_sub = bus_impl.subscribe(TOPIC_DEVICE_ANNOUNCE).await?;
-
+    let mut entity_sub = bus_impl.subscribe(TOPIC_ENTITY_ANNOUNCE).await?;
     component.clone().spawn().await?;
-
-    for _ in 0..2 {
-        timeout(Duration::from_millis(200), device_sub.next())
-            .await
-            .expect("announce not received")
-            .expect("announce stream closed unexpectedly");
-    }
+    wait_for_announcements(&mut device_sub, &mut entity_sub).await?;
 
     let command_topic = format!("{TOPIC_COMMAND_PREFIX}{}", entity_id.0);
     let command_payload =
@@ -266,15 +273,9 @@ async fn handles_set_color_temp_command_with_transition() -> Result<()> {
     let mut state_sub =
         bus_impl.subscribe(&format!("{TOPIC_STATE_UPDATE_PREFIX}{}", entity_id.0)).await?;
     let mut device_sub = bus_impl.subscribe(TOPIC_DEVICE_ANNOUNCE).await?;
-
+    let mut entity_sub = bus_impl.subscribe(TOPIC_ENTITY_ANNOUNCE).await?;
     component.clone().spawn().await?;
-
-    for _ in 0..2 {
-        timeout(Duration::from_millis(200), device_sub.next())
-            .await
-            .expect("announce not received")
-            .expect("announce stream closed unexpectedly");
-    }
+    wait_for_announcements(&mut device_sub, &mut entity_sub).await?;
 
     let command_topic = format!("{TOPIC_COMMAND_PREFIX}{}", entity_id.0);
     let command_payload =
@@ -326,15 +327,9 @@ async fn handles_set_rgb_command_with_transition() -> Result<()> {
     let mut state_sub =
         bus_impl.subscribe(&format!("{TOPIC_STATE_UPDATE_PREFIX}{}", entity_id.0)).await?;
     let mut device_sub = bus_impl.subscribe(TOPIC_DEVICE_ANNOUNCE).await?;
-
+    let mut entity_sub = bus_impl.subscribe(TOPIC_ENTITY_ANNOUNCE).await?;
     component.clone().spawn().await?;
-
-    for _ in 0..2 {
-        timeout(Duration::from_millis(200), device_sub.next())
-            .await
-            .expect("announce not received")
-            .expect("announce stream closed unexpectedly");
-    }
+    wait_for_announcements(&mut device_sub, &mut entity_sub).await?;
 
     let command_topic = format!("{TOPIC_COMMAND_PREFIX}{}", entity_id.0);
     let command_payload =

@@ -8,7 +8,8 @@ use bytes::Bytes;
 use hub_core::{
     bus::{Bus, InMemoryBus},
     bus_contract::{
-        StateUpdate, TOPIC_COMMAND_PREFIX, TOPIC_DEVICE_ANNOUNCE, TOPIC_STATE_UPDATE_PREFIX,
+        StateUpdate, TOPIC_COMMAND_PREFIX, TOPIC_DEVICE_ANNOUNCE, TOPIC_ENTITY_ANNOUNCE,
+        TOPIC_STATE_UPDATE_PREFIX,
     },
     cap::robotvac::{
         RobotVacCommand, RobotVacDescription, RobotVacFeatures, RobotVacState, RobotVacStatus,
@@ -139,15 +140,18 @@ async fn handles_start_command_and_emits_state() -> Result<()> {
     let mut state_sub =
         bus_impl.subscribe(&format!("{TOPIC_STATE_UPDATE_PREFIX}{}", entity_id.0)).await?;
     let mut device_sub = bus_impl.subscribe(TOPIC_DEVICE_ANNOUNCE).await?;
+    let mut entity_sub = bus_impl.subscribe(TOPIC_ENTITY_ANNOUNCE).await?;
 
     component.clone().spawn().await?;
 
-    for _ in 0..2 {
-        timeout(Duration::from_millis(200), device_sub.next())
-            .await
-            .context("device announce timed out")?
-            .context("device announce channel closed")?;
-    }
+    timeout(Duration::from_millis(200), device_sub.next())
+        .await
+        .context("device announce timed out")?
+        .context("device announce channel closed")?;
+    timeout(Duration::from_millis(200), entity_sub.next())
+        .await
+        .context("entity announce timed out")?
+        .context("entity announce channel closed")?;
 
     let payload = Bytes::from(serde_json::to_vec(&json!({ "action": "start" }))?);
     bus_impl.publish(&format!("{TOPIC_COMMAND_PREFIX}{}", entity_id.0), payload).await?;

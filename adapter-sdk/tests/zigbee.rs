@@ -1,13 +1,18 @@
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 
-use adapter_sdk::light::{DeviceMeta, EntityMeta, LightComponent, LightDriver};
 use adapter_sdk::zigbee::ZigbeeInfo;
+use adapter_sdk::{
+    light::{LightComponent, LightDriver},
+    meta::{DeviceMeta, EntityMeta},
+};
 use anyhow::Result;
 use async_trait::async_trait;
 use hub_core::{
     bus::{Bus, InMemoryBus},
-    bus_contract::{DeviceAnnounce, TOPIC_COMMAND_PREFIX, TOPIC_DEVICE_ANNOUNCE},
+    bus_contract::{
+        DeviceAnnounce, TOPIC_COMMAND_PREFIX, TOPIC_DEVICE_ANNOUNCE, TOPIC_ENTITY_ANNOUNCE,
+    },
     cap::light::{LightCommand, LightDescription, LightFeatures, LightState, Power},
     model::{DeviceId, EntityId},
 };
@@ -137,21 +142,24 @@ async fn announces_zigbee_metadata_on_device() -> Result<()> {
     let component = LightComponent::new(bus.clone(), device, entity, driver);
 
     let mut device_sub = bus_impl.subscribe(TOPIC_DEVICE_ANNOUNCE).await?;
+    let mut entity_sub = bus_impl.subscribe(TOPIC_ENTITY_ANNOUNCE).await?;
 
     component.clone().spawn().await?;
 
     let mut received = None;
-    for _ in 0..2 {
-        let msg = timeout(Duration::from_millis(200), device_sub.next())
-            .await
-            .expect("announce not received")
-            .expect("announce stream closed unexpectedly");
+    let msg = timeout(Duration::from_millis(200), device_sub.next())
+        .await
+        .expect("announce not received")
+        .expect("announce stream closed unexpectedly");
 
-        if let Ok(announce) = serde_json::from_slice::<DeviceAnnounce>(&msg.payload) {
-            received = Some(announce.metadata);
-            break;
-        }
+    if let Ok(announce) = serde_json::from_slice::<DeviceAnnounce>(&msg.payload) {
+        received = Some(announce.metadata);
     }
+
+    timeout(Duration::from_millis(200), entity_sub.next())
+        .await
+        .expect("entity announce not received")
+        .expect("entity stream closed unexpectedly");
 
     let metadata = received.expect("device announce not found");
     let zigbee_value = metadata.get("zigbee").expect("missing zigbee metadata").clone();

@@ -1,6 +1,6 @@
 use std::{collections::BTreeMap, sync::Arc};
 
-use crate::zigbee::ZigbeeInfo;
+use crate::meta::{DeviceMeta, EntityMeta};
 use anyhow::{Context, Result, anyhow};
 use async_trait::async_trait;
 use bytes::Bytes;
@@ -9,48 +9,12 @@ use hub_core::{
     bus::Bus,
     bus_contract::{
         DeviceAnnounce, EntityAnnounce, StateUpdate, TOPIC_COMMAND_PREFIX, TOPIC_DEVICE_ANNOUNCE,
-        TOPIC_STATE_UPDATE_PREFIX,
+        TOPIC_ENTITY_ANNOUNCE, TOPIC_STATE_UPDATE_PREFIX,
     },
     cap::light::{Brightness, LightCommand, LightDescription, LightState, Mireds, Rgb},
-    model::{DeviceId, EntityDomain, EntityId},
+    model::{EntityDomain, EntityId},
 };
-use serde::{Deserialize, Serialize};
 use tokio_stream::StreamExt;
-use uuid::Uuid;
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceMeta {
-    pub id: DeviceId,
-    pub name: String,
-    pub adapter: String,
-    pub manufacturer: Option<String>,
-    pub model: Option<String>,
-    pub sw_version: Option<String>,
-    pub hw_version: Option<String>,
-    pub area: Option<Uuid>,
-    pub metadata: BTreeMap<String, serde_json::Value>,
-    pub zigbee: Option<ZigbeeInfo>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EntityMeta {
-    pub id: EntityId,
-    pub name: String,
-    pub icon: Option<String>,
-    pub attributes: BTreeMap<String, serde_json::Value>,
-}
-
-impl DeviceMeta {
-    pub fn metadata_map(&self) -> BTreeMap<String, serde_json::Value> {
-        let mut metadata = self.metadata.clone();
-        if let Some(zigbee) = &self.zigbee
-            && let Ok(value) = serde_json::to_value(zigbee)
-        {
-            metadata.insert("zigbee".into(), value);
-        }
-        metadata
-    }
-}
 
 #[async_trait]
 pub trait LightDriver: Send + Sync + 'static {
@@ -144,7 +108,7 @@ impl LightComponent {
             attributes: e.attributes.clone(),
         };
         let bytes = Bytes::from(serde_json::to_vec(&msg)?);
-        self.bus.publish(TOPIC_DEVICE_ANNOUNCE, bytes).await?;
+        self.bus.publish(TOPIC_ENTITY_ANNOUNCE, bytes).await?;
         Ok(())
     }
 }
