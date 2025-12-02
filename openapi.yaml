@@ -1,0 +1,353 @@
+openapi: 3.0.3
+info:
+  title: Krypin Hub API
+  version: 0.2.0
+servers:
+  - url: http://localhost:8080
+  - url: grpc://localhost:50051
+tags:
+  - name: devices
+  - name: entities
+  - name: automations
+  - name: realtime
+paths:
+  /healthz:
+    get:
+      summary: Liveness probe
+      responses:
+        '200': { description: OK }
+  /devices:
+    get:
+      tags: [devices]
+      summary: List devices
+      responses:
+        '200':
+          description: Devices
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Device' }
+  /entities:
+    get:
+      tags: [entities]
+      summary: List entities
+      responses:
+        '200':
+          description: Entities
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Entity' }
+  /states/{entity_id}:
+    get:
+      tags: [entities]
+      summary: Get the latest state for an entity
+      parameters:
+        - in: path
+          name: entity_id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Latest state
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EntityState' }
+        '404': { description: Not found }
+    post:
+      tags: [entities]
+      summary: Set entity state
+      parameters:
+        - in: path
+          name: entity_id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                value: {}
+                attributes:
+                  type: object
+                  additionalProperties: {}
+                source:
+                  type: string
+      responses:
+        '200': { description: Accepted }
+  /command/{entity_id}:
+    post:
+      tags: [devices]
+      summary: Send an ad-hoc command to an entity/device
+      parameters:
+        - in: path
+          name: entity_id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action: { type: string, default: set }
+                value: {}
+                correlation_id: { type: string, format: uuid }
+      responses:
+        '202': { description: Enqueued }
+  /automations:
+    get:
+      tags: [automations]
+      summary: List automations
+      responses:
+        '200':
+          description: Automation list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AutomationDefinition' }
+    post:
+      tags: [automations]
+      summary: Create automation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NewAutomation' }
+      responses:
+        '201':
+          description: Created automation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AutomationDefinition' }
+  /automations/{id}/enable:
+    post:
+      tags: [automations]
+      summary: Enable automation
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Updated automation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AutomationDefinition' }
+  /automations/{id}/disable:
+    post:
+      tags: [automations]
+      summary: Disable automation
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Updated automation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AutomationDefinition' }
+  /automations/{id}/test:
+    post:
+      tags: [automations]
+      summary: Test automation against a trigger event
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TriggerEvent' }
+      responses:
+        '200':
+          description: Test result
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TestRun' }
+  /ws/events:
+    get:
+      tags: [realtime]
+      summary: WebSocket bus events
+      parameters:
+        - in: query
+          name: pattern
+          required: false
+          schema: { type: string, default: '*' }
+      responses:
+        '101': { description: Upgrades to a WebSocket stream of bus messages }
+components:
+  schemas:
+    Device:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        adapter: { type: string }
+        manufacturer: { type: string, nullable: true }
+        model: { type: string, nullable: true }
+        sw_version: { type: string, nullable: true }
+        hw_version: { type: string, nullable: true }
+        area: { type: string, format: uuid, nullable: true }
+    Entity:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        device_id: { type: string, format: uuid }
+        name: { type: string }
+        domain: { type: string }
+        icon: { type: string, nullable: true }
+        key: { type: string, nullable: true }
+        attributes:
+          type: object
+          additionalProperties: {}
+    EntityState:
+      type: object
+      properties:
+        entity_id: { type: string, format: uuid }
+        value: {}
+        attributes:
+          type: object
+          additionalProperties: {}
+        last_changed: { type: string, format: date-time }
+        last_updated: { type: string, format: date-time }
+        source: { type: string, nullable: true }
+    Trigger:
+      oneOf:
+        - type: object
+          properties:
+            type: { const: manual }
+        - type: object
+          properties:
+            type: { const: heartbeat }
+        - type: object
+          properties:
+            type: { const: time }
+            cron: { type: string }
+          required: [type, cron]
+        - type: object
+          properties:
+            type: { const: state_change }
+            entity_id: { type: string, format: uuid }
+            from: {}
+            to: {}
+          required: [type, entity_id]
+        - type: object
+          properties:
+            type: { const: mqtt_topic }
+            pattern: { type: string }
+          required: [type, pattern]
+    Condition:
+      oneOf:
+        - type: object
+          properties: { type: { const: always } }
+        - type: object
+          properties:
+            type: { const: entity_state_equals }
+            entity_id: { type: string, format: uuid }
+            value: {}
+          required: [type, entity_id, value]
+        - type: object
+          properties:
+            type: { const: payload_equals }
+            path: { type: string }
+            value: {}
+          required: [type, path, value]
+    Action:
+      oneOf:
+        - type: object
+          properties:
+            type: { const: set_entity_state }
+            entity_id: { type: string, format: uuid }
+            value: {}
+            attributes:
+              type: object
+              additionalProperties: {}
+          required: [type, entity_id, value]
+        - type: object
+          properties:
+            type: { const: publish_bus_message }
+            topic: { type: string }
+            payload: {}
+          required: [type, topic, payload]
+        - type: object
+          properties:
+            type: { const: log }
+            message: { type: string }
+          required: [type, message]
+    AutomationDefinition:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        trigger: { $ref: '#/components/schemas/Trigger' }
+        conditions:
+          type: array
+          items: { $ref: '#/components/schemas/Condition' }
+        actions:
+          type: array
+          items: { $ref: '#/components/schemas/Action' }
+        enabled: { type: boolean }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    NewAutomation:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: string, nullable: true }
+        trigger: { $ref: '#/components/schemas/Trigger' }
+        conditions:
+          type: array
+          items: { $ref: '#/components/schemas/Condition' }
+          default: []
+        actions:
+          type: array
+          items: { $ref: '#/components/schemas/Action' }
+        enabled: { type: boolean, default: true }
+      required: [name, trigger, actions]
+    TriggerEvent:
+      oneOf:
+        - type: object
+          properties:
+            type: { const: manual }
+        - type: object
+          properties:
+            type: { const: heartbeat }
+            ts: { type: string, format: date-time }
+          required: [type, ts]
+        - type: object
+          properties:
+            type: { const: time_fired }
+            cron: { type: string }
+          required: [type, cron]
+        - type: object
+          properties:
+            type: { const: state_changed }
+            entity_id: { type: string, format: uuid }
+            from: {}
+            to: {}
+          required: [type, entity_id, to]
+        - type: object
+          properties:
+            type: { const: mqtt_message }
+            topic: { type: string }
+            payload: {}
+          required: [type, topic, payload]
+    TestRun:
+      type: object
+      properties:
+        automation_id: { type: string, format: uuid }
+        executed: { type: boolean }
+        reason: { type: string, nullable: true }

@@ -77,6 +77,7 @@ impl Display for StorageKind {
 #[derive(Clone, Debug)]
 pub struct Config {
     pub bind: SocketAddr,
+    pub grpc_bind: SocketAddr,
     pub bus: BusKind,
     pub mqtt: MqttConfig,
     pub auth: AuthConfig,
@@ -87,6 +88,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             bind: "127.0.0.1:8080".parse().unwrap(),
+            grpc_bind: "127.0.0.1:50051".parse().unwrap(),
             bus: BusKind::InMem,
             mqtt: MqttConfig::default(),
             auth: AuthConfig::default(),
@@ -101,6 +103,9 @@ impl Config {
         let mut c = Self::default();
         if let Ok(s) = std::env::var("KRYPIN_BIND") {
             c.bind = s.parse()?;
+        }
+        if let Ok(s) = std::env::var("KRYPIN_GRPC_BIND") {
+            c.grpc_bind = s.parse()?;
         }
         if let Ok(s) = std::env::var("KRYPIN_BUS") {
             c.bus = BusKind::from_str(&s).unwrap();

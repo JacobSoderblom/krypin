@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use adapter_mqtt::MqttBus;
 use anyhow::{Ok, Result};
+use automations::{AutomationEngine, AutomationStore, InMemoryAutomationStore};
 use hub_core::{
     bus::{Bus, InMemoryBus},
     storage::{InMemoryStorage, PostgresStorage, Storage},
@@ -30,5 +31,8 @@ pub async fn build_state(cfg: &Config) -> Result<AppState> {
         }
     };
 
-    Ok(AppState { store, bus, auth: cfg.auth.clone() })
+    let automation_store: Arc<dyn AutomationStore> = Arc::new(InMemoryAutomationStore::default());
+    let automations = Arc::new(AutomationEngine::new(automation_store, store.clone(), bus.clone()));
+
+    Ok(AppState { store, bus, auth: cfg.auth.clone(), automations })
 }

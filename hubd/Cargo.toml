@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-axum = { version = "0.8.6", features = ["macros"] }
+axum = { version = "0.8.6", features = ["macros", "ws"] }
 bytes = "1.10.1"
 chrono = "0.4.42"
 hyper = "1.7.0"
@@ -18,11 +18,21 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 uuid = "1.18.1"
 hub-core = { path = "../hub-core" }
 adapter-mqtt = { path = "../adapter-mqtt" }
+automations = { path = "../automations" }
 anyhow = "1.0.100"
 constant_time_eq = "0.3.0"
 dotenv = "0.15.0"
 url = "2.5.4"
 metrics = "0.23"
+tonic = { version = "0.12", features = ["transport"] }
+prost = "0.13"
+prost-types = "0.13"
+base64 = "0.22"
+futures = "0.3"
+async-stream = "0.3"
 
 [dev-dependencies]
 async-trait = "0.1"
+
+[build-dependencies]
+tonic-build = "0.12"

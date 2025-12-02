@@ -1,6 +1,8 @@
 pub mod auth;
+pub mod automation;
 pub mod handlers;
 mod routes;
+pub mod ws;
 pub use routes::build as build_router;
 
 use crate::{config::Config, state::AppState};

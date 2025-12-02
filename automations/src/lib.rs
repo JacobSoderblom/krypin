@@ -21,6 +21,8 @@ use serde_json::Value;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
+pub mod samples;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct AutomationId(pub Uuid);
 
@@ -443,6 +445,7 @@ mod tests {
     use super::*;
     use anyhow::anyhow;
     use hub_core::bus::InMemoryBus;
+    use uuid::Uuid;
 
     #[derive(Default, Clone)]
     struct DummyStorage {
@@ -583,5 +586,50 @@ mod tests {
 
         let latest = storage.latest_entity_state(entity_id).await.unwrap().unwrap();
         assert_eq!(latest.value, Value::Bool(true));
+    }
+
+    #[tokio::test]
+    async fn sample_motion_light_turns_on_light() {
+        let store = Arc::new(InMemoryAutomationStore::default());
+        let storage = Arc::new(DummyStorage::default());
+        let bus = Arc::new(InMemoryBus::default());
+        let engine = AutomationEngine::new(store, storage.clone(), bus);
+
+        let motion = EntityId(Uuid::new_v4());
+        let light = EntityId(Uuid::new_v4());
+        engine.create_automation(samples::motion_light(motion, light)).await.unwrap();
+
+        engine
+            .handle_event(TriggerEvent::StateChanged {
+                entity_id: motion,
+                from: None,
+                to: Value::Bool(true),
+            })
+            .await
+            .unwrap();
+
+        let latest = storage.latest_entity_state(light).await.unwrap().unwrap();
+        assert_eq!(latest.value, Value::String("on".into()));
+    }
+
+    #[tokio::test]
+    async fn sample_schedule_sets_temperature() {
+        let store = Arc::new(InMemoryAutomationStore::default());
+        let storage = Arc::new(DummyStorage::default());
+        let bus = Arc::new(InMemoryBus::default());
+        let engine = AutomationEngine::new(store, storage.clone(), bus);
+
+        let thermostat = EntityId(Uuid::new_v4());
+        let cron = "0 7 * * *";
+        engine
+            .create_automation(samples::thermostat_schedule(thermostat, 21.0, cron))
+            .await
+            .unwrap();
+
+        engine.handle_event(TriggerEvent::TimeFired { cron: cron.to_string() }).await.unwrap();
+
+        let latest = storage.latest_entity_state(thermostat).await.unwrap().unwrap();
+        assert_eq!(latest.value, Value::Number(serde_json::Number::from_f64(21.0).unwrap()));
+        assert_eq!(latest.attributes.get("unit"), Some(&Value::String("C".into())));
     }
 }

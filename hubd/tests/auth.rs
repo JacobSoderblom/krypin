@@ -1,5 +1,6 @@
 use anyhow::{Result, anyhow};
 use async_trait::async_trait;
+use automations::{AutomationEngine, InMemoryAutomationStore};
 use axum::{
     Router,
     body::Body,
@@ -113,10 +114,18 @@ impl hub_core::bus::Bus for RecordingBus {
 }
 
 fn app_with_auth(tokens: Vec<&str>, store: RecordingStorage, bus: RecordingBus) -> Router {
+    let store = Arc::new(store);
+    let bus = Arc::new(bus);
+    let automations = Arc::new(AutomationEngine::new(
+        Arc::new(InMemoryAutomationStore::default()),
+        store.clone(),
+        bus.clone(),
+    ));
     let state = AppState {
-        store: Arc::new(store),
-        bus: Arc::new(bus),
+        store,
+        bus,
         auth: AuthConfig { tokens: tokens.into_iter().map(|s| s.to_string()).collect() },
+        automations,
     };
 
     build_router(state)

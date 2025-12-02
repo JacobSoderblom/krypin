@@ -1,0 +1,115 @@
+syntax = "proto3";
+
+package krypin.hub;
+
+message Empty {}
+
+message Device {
+  string id = 1;
+  string name = 2;
+  string adapter = 3;
+  string manufacturer = 4;
+  string model = 5;
+  string sw_version = 6;
+  string hw_version = 7;
+  string area_id = 8;
+}
+
+message Entity {
+  string id = 1;
+  string device_id = 2;
+  string name = 3;
+  string domain = 4;
+  string icon = 5;
+  string key = 6;
+  map<string, string> attributes = 7;
+}
+
+message EntityState {
+  string entity_id = 1;
+  string value_json = 2;
+  map<string, string> attributes = 3;
+  string last_changed = 4;
+  string last_updated = 5;
+  string source = 6;
+}
+
+message ListDevicesResponse {
+  repeated Device devices = 1;
+}
+
+message ListEntitiesResponse {
+  repeated Entity entities = 1;
+}
+
+message GetStateRequest {
+  string entity_id = 1;
+}
+
+message SendCommandRequest {
+  string entity_id = 1;
+  string action = 2;
+  string value_json = 3;
+  string correlation_id = 4;
+}
+
+message CommandResponse {
+  bool accepted = 1;
+}
+
+message Automation {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string trigger_json = 4;
+  repeated string conditions_json = 5;
+  repeated string actions_json = 6;
+  bool enabled = 7;
+  string created_at = 8;
+  string updated_at = 9;
+}
+
+message NewAutomation {
+  string name = 1;
+  string description = 2;
+  string trigger_json = 3;
+  repeated string conditions_json = 4;
+  repeated string actions_json = 5;
+  bool enabled = 6;
+}
+
+message AutomationList {
+  repeated Automation automations = 1;
+}
+
+message AutomationIdRequest {
+  string id = 1;
+}
+
+message TestAutomationRequest {
+  string id = 1;
+  string event_json = 2;
+}
+
+message TestAutomationResponse {
+  bool executed = 1;
+  string reason = 2;
+}
+
+message BusEvent {
+  string topic = 1;
+  string payload_json = 2;
+}
+
+service HubService {
+  rpc ListDevices(Empty) returns (ListDevicesResponse);
+  rpc ListEntities(Empty) returns (ListEntitiesResponse);
+  rpc GetState(GetStateRequest) returns (EntityState);
+  rpc SendCommand(SendCommandRequest) returns (CommandResponse);
+  rpc ListAutomations(Empty) returns (AutomationList);
+  rpc CreateAutomation(NewAutomation) returns (Automation);
+  rpc EnableAutomation(AutomationIdRequest) returns (Automation);
+  rpc DisableAutomation(AutomationIdRequest) returns (Automation);
+  rpc TestAutomation(TestAutomationRequest) returns (TestAutomationResponse);
+  rpc StreamEvents(Empty) returns (stream BusEvent);
+}
